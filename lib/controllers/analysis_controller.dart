@@ -49,7 +49,7 @@ class AnalysisController extends GetxController {
 
   var riskAssessments = <RiskAssessment>[].obs;
   var activitySuggestions = <ActivitySuggestion>[].obs;
-  static const String _apiKey = 'AIzaSyCGpJKmA5tI9X8OiuRadA_w4YUsXSw8bCc';
+  static const String _apiKey = 'xxx';
 
   @override
   void onInit() {
