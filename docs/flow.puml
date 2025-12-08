@@ -1,0 +1,30 @@
+@startuml SimpleFlow
+title Nadimu – Simple App Flow
+
+start
+:Splash;
+:Onboarding;
+:Login / Register;
+:Home Tabs (Dashboard, Statistics, History, Analysis);
+
+if (Connect IoT?) then (yes)
+  :IoT Connection;
+  :Realtime Monitoring;
+  note right
+    Data via MQTT (MqttService)
+    Update UI via GetX (MonitoringController)
+  end note
+  :Stop Monitoring -> Save to History;
+  note right
+    Save via HistoryService (SharedPreferences)
+  end note
+endif
+
+:View Statistics;
+:Run AI Analysis;
+note right
+  HistoryService -> AnalysisController -> Gemini API
+end note
+
+stop
+@enduml

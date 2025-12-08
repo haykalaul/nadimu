@@ -2,8 +2,9 @@ import 'package:get/get.dart';
 import 'package:nadimu/routes/app_routes.dart';
 
 class ConnectionController extends GetxController {
-  var connectionType = 'Bluetooth'.obs;
+  var connectionType = 'MQTT'.obs;
   var isConnected = false.obs;
+  var isConnecting = false.obs;
   var devices = ['ESP32-Health-Monitor', 'HeartRate-Sensor-7B'].obs;
 
   void changeConnectionType(String type) {

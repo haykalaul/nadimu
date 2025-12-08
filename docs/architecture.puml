@@ -1,0 +1,32 @@
+@startuml Architecture
+actor User
+package "Flutter App (Nadimu)" {
+  component "Views (Screens)" as Views
+  component "GetX Controllers" as Controllers
+  component "Services" as Services
+  component "Models" as Models
+  component "Themes" as Themes
+}
+
+package "Platform" {
+  component "SharedPreferences" as SP
+  component "MQTT Client" as MQTTClient
+}
+
+node "MQTT Broker\nbroker.mqtt.cool" as Broker
+node "IoT Device\nESP32 PulseOx" as Device
+cloud "Gemini API" as Gemini
+
+User --> Views
+Views --> Controllers
+Controllers --> Services
+Services --> MQTTClient
+MQTTClient --> Broker
+Broker --> Device
+Device --> Broker
+Broker --> MQTTClient
+Services --> SP
+Controllers --> Models
+Controllers --> Views
+Services --> Gemini
+@enduml

@@ -72,8 +72,8 @@ class DashboardScreen extends StatelessWidget {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.green,
+                        decoration: BoxDecoration(
+                          color: controller.isConnected.value ? AppTheme.green : Colors.red,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -173,29 +173,29 @@ class DashboardScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     // Start Measurement Button
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: controller.startMeasurement,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 8,
-                          shadowColor: AppTheme.primary.withOpacity(0.3),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    Obx(() => SizedBox(
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: controller.startMeasurement,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 8,
+                              shadowColor: AppTheme.primary.withOpacity(0.3),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              controller.isConnected.value ? 'Measure Now' : 'Connect Device',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.015,
+                              ),
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'Start Measurement',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.015,
-                          ),
-                        ),
-                      ),
-                    ),
+                        )),
                     const SizedBox(height: 24),
                   ],
                 ),

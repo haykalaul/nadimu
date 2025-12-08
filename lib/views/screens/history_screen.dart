@@ -13,6 +13,11 @@ class HistoryScreen extends StatelessWidget {
     }
     final controller = Get.find<HistoryController>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Refresh history when screen is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.refreshHistory();
+    });
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.backgroundDark : AppTheme.backgroundLight,
@@ -20,7 +25,7 @@ class HistoryScreen extends StatelessWidget {
         child: Column(
           children: [
             _buildAppBar(isDark),
-            Expanded(child: _buildList(controller)),
+            Expanded(child: _buildList(context, controller)),
             _buildBottomCTA(controller, isDark),
           ],
         ),
@@ -63,8 +68,62 @@ class HistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildList(HistoryController controller) {
-    return Obx(() => ListView.separated(
+  Widget _buildList(BuildContext context, HistoryController controller) {
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      
+      if (controller.historyList.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.history,
+                  size: 64,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[600]
+                      : Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No measurement history yet',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[400]
+                        : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Start a measurement to see your history here',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[500]
+                        : Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      
+      return RefreshIndicator(
+        onRefresh: controller.refreshHistory,
+        child: ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: controller.historyList.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -81,7 +140,9 @@ class HistoryScreen extends StatelessWidget {
               ),
             );
           },
-        ));
+        ),
+      );
+    });
   }
 
   Widget _buildBottomCTA(HistoryController controller, bool isDark) {

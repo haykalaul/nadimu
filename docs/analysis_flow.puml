@@ -1,0 +1,19 @@
+@startuml AnalysisFlow
+actor User
+participant AnalysisScreen as AnalysisUI
+participant AnalysisController as AnalysisCtl
+participant HistoryService as History
+database SharedPreferences as SP
+participant Gemini
+
+User -> AnalysisUI: Tap "Analyze"
+AnalysisUI -> AnalysisCtl: analyzeHealth()
+AnalysisCtl -> History: getRecentHistory(days)
+History -> SP: read history
+SP --> History: history list
+History --> AnalysisCtl: measurements
+AnalysisCtl -> AnalysisCtl: _buildInputData() and _buildPrompt()
+AnalysisCtl -> Gemini: generateContent(prompt)
+Gemini --> AnalysisCtl: JSON (summary/risks/suggestions)
+AnalysisCtl -> AnalysisUI: update observable fields
+@enduml

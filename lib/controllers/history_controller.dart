@@ -1,63 +1,84 @@
 import 'package:get/get.dart';
+import 'package:nadimu/services/history_service.dart';
 
 class HistoryController extends GetxController {
-  var historyList = [
-    {
-      'date': 'October 26, 2023',
-      'label': 'Today',
-      'status': 'Normal',
-      'avgHeartRate': 78,
-      'avgSpo2': 98,
-    },
-    {
-      'date': 'October 25, 2023',
-      'label': 'Yesterday',
-      'status': 'Normal',
-      'avgHeartRate': 85,
-      'avgSpo2': 96,
-    },
-    {
-      'date': 'October 24, 2023',
-      'label': 'Tuesday',
-      'status': 'Alert',
-      'avgHeartRate': 92,
-      'avgSpo2': 94,
-    },
-    {
-      'date': 'October 23, 2023',
-      'label': 'Monday',
-      'status': 'Normal',
-      'avgHeartRate': 76,
-      'avgSpo2': 97,
-    },
-    {
-      'date': 'October 22, 2023',
-      'label': 'Sunday',
-      'status': 'Danger',
-      'avgHeartRate': 110,
-      'avgSpo2': 90,
-    },
-    {
-      'date': 'October 21, 2023',
-      'label': 'Saturday',
-      'status': 'Normal',
-      'avgHeartRate': 82,
-      'avgSpo2': 99,
-    },
-    {
-      'date': 'October 20, 2023',
-      'label': 'Friday',
-      'status': 'Normal',
-      'avgHeartRate': 74,
-      'avgSpo2': 97,
-    },
-  ].obs;
+  final HistoryService historyService = HistoryService();
+  var historyList = <Map<String, dynamic>>[].obs;
+  var isLoading = true.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadHistory();
+  }
+
+  Future<void> loadHistory() async {
+    try {
+      isLoading.value = true;
+      final measurements = await historyService.getRecentHistory(7); // Last 7 days
+      
+      historyList.value = measurements.map((m) => {
+        'id': m.id,
+        'date': m.formattedDate,
+        'label': m.dateLabel,
+        'status': m.statusLabel,
+        'avgHeartRate': m.heartRate,
+        'avgSpo2': m.spo2,
+        'timestamp': m.timestamp.toIso8601String(),
+        'time': m.formattedTime,
+        'quality': m.quality,
+        'activityMode': m.activityMode,
+        'duration': m.duration,
+        'heartRateData': m.heartRateData,
+        'statusMessage': m.status,
+      }).toList();
+    } catch (e) {
+      print('Error loading history: $e');
+      historyList.value = [];
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
   void viewDetails(int index) {
-    Get.toNamed('/history-details', arguments: historyList[index]);
+    if (index >= 0 && index < historyList.length) {
+      Get.toNamed('/history-details', arguments: historyList[index]);
+    }
   }
 
   void viewFullHistory() {
-    Get.snackbar('Full History', 'Viewing full history');
+    // Load all history (not just 7 days)
+    loadAllHistory();
+  }
+
+  Future<void> loadAllHistory() async {
+    try {
+      isLoading.value = true;
+      final measurements = await historyService.getAllHistory();
+      
+      historyList.value = measurements.map((m) => {
+        'id': m.id,
+        'date': m.formattedDate,
+        'label': m.dateLabel,
+        'status': m.statusLabel,
+        'avgHeartRate': m.heartRate,
+        'avgSpo2': m.spo2,
+        'timestamp': m.timestamp.toIso8601String(),
+        'time': m.formattedTime,
+        'quality': m.quality,
+        'activityMode': m.activityMode,
+        'duration': m.duration,
+        'heartRateData': m.heartRateData,
+        'statusMessage': m.status,
+      }).toList();
+    } catch (e) {
+      print('Error loading full history: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> refreshHistory() async {
+    await loadHistory();
   }
 }

@@ -1,0 +1,30 @@
+@startuml RealtimeMonitoring
+actor User
+participant DashboardScreen as Dashboard
+participant ConnectionController as Connection
+participant RealtimeMonitoringScreen as MonitoringUI
+participant MonitoringController as Monitoring
+participant MqttService as MQTT
+participant Broker
+participant Device
+participant HistoryService as History
+database SharedPreferences as SP
+
+User -> Dashboard: Tap "Start Measurement"
+Dashboard -> Connection: Navigate to IoT Connection
+User -> Connection: Select device
+Connection -> MonitoringUI: Navigate to Realtime Monitoring
+MonitoringUI -> Monitoring: onInit()
+Monitoring -> MQTT: connect()
+MQTT -> Broker: CONNECT + SUBSCRIBE topics
+Broker -> Device: deliver command / wait
+Device -> Broker: PUBLISH data (HR/SpO2)
+Broker -> MQTT: MQTT messages
+MQTT -> Monitoring: callbacks onData/onStatus...
+Monitoring -> MonitoringUI: update Rx values (Obx)
+User -> MonitoringUI: Stop Monitoring
+MonitoringUI -> Monitoring: stopMonitoring()
+Monitoring -> History: saveMeasurement(measurement)
+History -> SP: setStringList(history)
+Monitoring -> MQTT: disconnect()
+@enduml

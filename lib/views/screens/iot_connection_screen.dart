@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:nadimu/controllers/connection_controller.dart';
 import 'package:nadimu/themes/app_theme.dart';
+import 'package:nadimu/services/mqtt_service.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class IotConnectionScreen extends StatelessWidget {
   const IotConnectionScreen({super.key});
@@ -13,7 +15,11 @@ class IotConnectionScreen extends StatelessWidget {
       Get.put(ConnectionController());
     }
     final controller = Get.find<ConnectionController>();
+    final mqttService = MqttService();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Sync connection status with MQTT service
+    controller.isConnected.value = mqttService.isConnected;
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.backgroundDark : AppTheme.backgroundLight,
@@ -38,7 +44,7 @@ class IotConnectionScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Connect Device',
+                    'MQTT Connection',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -56,6 +62,12 @@ class IotConnectionScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isDark ? AppTheme.cardDark.withOpacity(0.5) : AppTheme.cardLight,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: controller.isConnected.value
+                            ? AppTheme.green.withOpacity(0.5)
+                            : Colors.red.withOpacity(0.5),
+                        width: 1.5,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
@@ -83,45 +95,48 @@ class IotConnectionScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: Text(
-                            'Status: ${controller.isConnected.value ? 'Connected' : 'Disconnected'}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? Colors.grey[200] : Colors.grey[800],
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'MQTT Status',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                controller.isConnected.value ? 'Connected' : 'Disconnected',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: controller.isConnected.value
+                                      ? AppTheme.green
+                                      : Colors.red,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  )),
-            ),
-            // Connection Method Selector
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Obx(() => Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.grey[800] : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.all(4),
-                    child: Row(
-                      children: [
-                        _buildConnectionTypeButton(
-                          context,
-                          label: 'Bluetooth',
-                          value: 'Bluetooth',
-                          selected: controller.connectionType.value == 'Bluetooth',
-                          onTap: () => controller.changeConnectionType('Bluetooth'),
-                        ),
-                        _buildConnectionTypeButton(
-                          context,
-                          label: 'WiFi',
-                          value: 'WiFi',
-                          selected: controller.connectionType.value == 'WiFi',
-                          onTap: () => controller.changeConnectionType('WiFi'),
-                        ),
+                        if (controller.isConnected.value)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'LIVE',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.green,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   )),
@@ -135,7 +150,7 @@ class IotConnectionScreen extends StatelessWidget {
                   children: [
                     const SizedBox(height: 20),
                     Text(
-                      'Connect via Bluetooth',
+                      'Connect to MQTT Broker',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -145,41 +160,61 @@ class IotConnectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Select your health monitor from the list below.',
+                      'Connect to broker.mqtt.cool to receive real-time sensor data from your ESP32 device.',
                       style: TextStyle(
                         fontSize: 16,
                         color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // Device List
-                    Obx(() => controller.devices.isEmpty
-                        ? _buildEmptyState(context)
-                        : Column(
-                            children: controller.devices.asMap().entries.map((entry) {
-                              final device = entry.value;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _buildDeviceCard(
-                                  context,
-                                  device,
-                                  () {
-                                    controller.connectDevice(device);
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Connected to $device'),
-                                          backgroundColor: AppTheme.green,
-                                          behavior: SnackBarBehavior.floating,
-                                          duration: const Duration(seconds: 2),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                              );
-                            }).toList(),
-                          )),
+                    const SizedBox(height: 24),
+                    // MQTT Info Card
+                    _MqttInfoCard(isDark: isDark),
+                    const SizedBox(height: 24),
+                    // Topics Info
+                    Text(
+                      'Subscribed Topics',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF333333),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _TopicCard(
+                      topic: 'pulseox/data',
+                      description: 'Complete measurement data (JSON)',
+                      icon: Icons.data_object,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 8),
+                    _TopicCard(
+                      topic: 'pulseox/status',
+                      description: 'Device status messages',
+                      icon: Icons.info_outline,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 8),
+                    _TopicCard(
+                      topic: 'pulseox/heartrate',
+                      description: 'Heart rate value only',
+                      icon: Icons.monitor_heart,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 8),
+                    _TopicCard(
+                      topic: 'pulseox/spo2',
+                      description: 'SpO2 value only',
+                      icon: Icons.bloodtype,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 8),
+                    _TopicCard(
+                      topic: 'pulseox/command',
+                      description: 'Send commands to device',
+                      icon: Icons.send,
+                      isDark: isDark,
+                      isCommand: true,
+                    ),
                     const SizedBox(height: 100), // Space for footer
                   ],
                 ),
@@ -200,54 +235,90 @@ class IotConnectionScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed: controller.scanDevices,
-                      icon: const Icon(Icons.search, size: 20),
-                      label: const Text('Scan for Devices'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  Obx(() => SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: controller.isConnected.value
+                              ? null
+                              : () async {
+                                  controller.isConnecting.value = true;
+                                  final mqttService = MqttService();
+                                  final success = await mqttService.connect();
+                                  controller.isConnecting.value = false;
+                                  
+                                  if (success) {
+                                    controller.isConnected.value = true;
+                                    Fluttertoast.showToast(
+                                      msg: 'Connected to MQTT broker',
+                                      toastLength: Toast.LENGTH_SHORT,
+                                      backgroundColor: AppTheme.green,
+                                    );
+                                    // Navigate to monitoring screen
+                                    Get.toNamed('/realtime-monitoring');
+                                  } else {
+                                    Fluttertoast.showToast(
+                                      msg: 'Failed to connect to MQTT broker',
+                                      toastLength: Toast.LENGTH_SHORT,
+                                      backgroundColor: Colors.red,
+                                    );
+                                  }
+                                },
+                          icon: controller.isConnecting.value
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Icon(
+                                  controller.isConnected.value ? Icons.check_circle : Icons.wifi,
+                                  size: 20,
+                                ),
+                          label: Text(
+                            controller.isConnecting.value
+                                ? 'Connecting...'
+                                : controller.isConnected.value
+                                    ? 'Connected'
+                                    : 'Connect to MQTT',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: controller.isConnected.value
+                                ? AppTheme.green
+                                : AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            disabledBackgroundColor: AppTheme.green,
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
+                      )),
                   const SizedBox(height: 12),
                   Obx(() => SizedBox(
                         width: double.infinity,
                         height: 48,
-                        child: TextButton(
+                        child: OutlinedButton.icon(
                           onPressed: controller.isConnected.value
                               ? () {
-                                  controller.testConnection();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Connection tested successfully'),
-                                        backgroundColor: AppTheme.green,
-                                        behavior: SnackBarBehavior.floating,
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
+                                  mqttService.disconnect();
+                                  controller.isConnected.value = false;
+                                  Fluttertoast.showToast(
+                                    msg: 'Disconnected from MQTT broker',
+                                    toastLength: Toast.LENGTH_SHORT,
+                                  );
                                 }
                               : null,
-                          style: TextButton.styleFrom(
-                            foregroundColor: controller.isConnected.value ? AppTheme.primary : Colors.grey,
+                          icon: const Icon(Icons.close, size: 20),
+                          label: const Text('Disconnect'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                          ),
-                          child: const Text(
-                            'Test Connection',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            side: const BorderSide(color: Colors.red),
                           ),
                         ),
                       )),
@@ -259,61 +330,130 @@ class IotConnectionScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildConnectionTypeButton(
-    BuildContext context, {
-    required String label,
-    required String value,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+class _MqttInfoCard extends StatelessWidget {
+  final bool isDark;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 32,
-          decoration: BoxDecoration(
-            color: selected
-                ? (isDark ? Colors.grey[700] : Colors.white)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: selected
-                    ? (isDark ? Colors.white : AppTheme.primary)
-                    : (isDark ? Colors.grey[400] : Colors.grey[500]),
-              ),
-            ),
-          ),
+  const _MqttInfoCard({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.blue.withOpacity(0.1) : Colors.blue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.3),
+          width: 1,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cloud, color: Colors.blue, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'MQTT Broker Information',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.blue[200] : Colors.blue[800],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _InfoRow(
+            label: 'Broker',
+            value: 'broker.mqtt.cool',
+            isDark: isDark,
+          ),
+          const SizedBox(height: 8),
+          _InfoRow(
+            label: 'Port',
+            value: '1883',
+            isDark: isDark,
+          ),
+          const SizedBox(height: 8),
+          _InfoRow(
+            label: 'Protocol',
+            value: 'MQTT',
+            isDark: isDark,
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildDeviceCard(BuildContext context, String deviceName, VoidCallback onConnect) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isDark;
 
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.blue[200] : Colors.blue[800],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TopicCard extends StatelessWidget {
+  final String topic;
+  final String description;
+  final IconData icon;
+  final bool isDark;
+  final bool isCommand;
+
+  const _TopicCard({
+    required this.topic,
+    required this.description,
+    required this.icon,
+    required this.isDark,
+    this.isCommand = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardDark.withOpacity(0.5) : AppTheme.cardLight,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isCommand
+              ? AppTheme.primary.withOpacity(0.3)
+              : (isDark ? Colors.grey[800]! : Colors.grey[200]!),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -328,86 +468,76 @@ class IotConnectionScreen extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
+              color: isCommand
+                  ? AppTheme.primary.withOpacity(0.1)
+                  : AppTheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.monitor_heart,
-              color: AppTheme.primary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              deviceName,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.grey[200] : Colors.grey[800],
-              ),
-              overflow: TextOverflow.ellipsis,
+            child: Icon(
+              icon,
+              color: isCommand ? AppTheme.primary : AppTheme.primary,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: onConnect,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  topic,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.grey[200] : Colors.grey[800],
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isCommand)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'PUBLISH',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'SUBSCRIBE',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
-            child: const Text(
-              'Connect',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
-      margin: const EdgeInsets.only(top: 16),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[800]!.withOpacity(0.5) : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.bluetooth_searching,
-            size: 48,
-            color: isDark ? Colors.grey[500] : Colors.grey[400],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'No devices found',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.grey[300] : Colors.grey[700],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Make sure your device is on and in pairing mode.',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.grey[400] : Colors.grey[500],
-            ),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );

@@ -1,0 +1,22 @@
+@startuml NavigationFlow
+start
+:SplashScreen;
+:Onboarding;
+:Login / Register;
+:Home (Tabs);
+partition Home {
+  :Dashboard;
+  if (Connect IoT?) then (yes)
+    :IoT Connection;
+    :Realtime Monitoring;
+    :Stop -> Save to History;
+  else (no)
+  endif
+  :Statistics;
+  :History;
+  :History Details;
+  :Analysis (AI);
+  :Account;
+}
+stop
+@enduml

@@ -289,6 +289,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.6"
+  dart_mqtt:
+    dependency: "direct main"
+    description:
+      name: dart_mqtt
+      sha256: a2d349289d3646445f9dec8a25770a3afc5644f7e4762a34bbd1a1eccca09213
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.6"
   dart_style:
     dependency: transitive
     description:
@@ -337,6 +345,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.7"
+  event_bus:
+    dependency: transitive
+    description:
+      name: event_bus
+      sha256: "1a55e97923769c286d295240048fc180e7b0768902c3c2e869fe059aafa15304"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   fake_async:
     dependency: transitive
     description:
@@ -840,6 +856,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  mqtt_client:
+    dependency: "direct main"
+    description:
+      name: mqtt_client
+      sha256: "3b3f406bf804df7de909f2c5098fba1a7d87fc4d86f01b6a12dc8d1b24be221f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "10.11.1"
   nested:
     dependency: transitive
     description:
@@ -1629,6 +1653,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.6.1"
+  xtransport:
+    dependency: transitive
+    description:
+      name: xtransport
+      sha256: c94bfae49323f7e601fb5ed85f3da20206694310c9ed060af2652c03dac1c504
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.7"
   yaml:
     dependency: transitive
     description:

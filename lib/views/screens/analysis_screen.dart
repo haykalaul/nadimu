@@ -28,10 +28,11 @@ class AnalysisScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 8),
-                    // Analyze Button
-                    _buildAnalyzeButton(context, controller, isDark),
+                children: [
+                  const SizedBox(height: 8),
+                  Obx(() => _buildPeriodSelector(controller, isDark)),
+                  // Analyze Button
+                  _buildAnalyzeButton(context, controller, isDark),
                     const SizedBox(height: 24),
                     // Summary Card
                     Obx(() => _buildSummaryCard(controller, isDark)),
@@ -51,6 +52,42 @@ class AnalysisScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector(AnalysisController controller, bool isDark) {
+    final options = [3, 7, 14, 30];
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Analysis Period',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+              ),
+            ),
+          ),
+          DropdownButton<int>(
+            value: controller.analysisDays.value,
+            underline: const SizedBox(),
+            items: options
+                .map((d) => DropdownMenuItem<int>(
+                      value: d,
+                      child: Text('$d days'),
+                    ))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) {
+                controller.analysisDays.value = v;
+              }
+            },
+          ),
+        ],
       ),
     );
   }
