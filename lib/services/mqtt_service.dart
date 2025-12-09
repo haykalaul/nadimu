@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:nadimu/models/pulseox_data.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MqttService {
   static final MqttService _instance = MqttService._internal();
@@ -12,6 +13,9 @@ class MqttService {
   MqttServerClient? client;
   bool isConnected = false;
   StreamSubscription? _messageSubscription;
+  
+  // Supabase client
+  final SupabaseClient supabase = Supabase.instance.client;
   
   // Callbacks
   Function(PulseOxData)? onDataReceived;
@@ -35,7 +39,7 @@ class MqttService {
       try {
         l(connected);
       } catch (_) {}
-      }
+    }
   }
 
   // Topics
@@ -56,6 +60,7 @@ class MqttService {
       if (client != null && isConnected) {
         disconnect();
       }
+      
       client = MqttServerClient.withPort(broker, clientId, port);
       client!.logging(on: false);
       client!.keepAlivePeriod = 20;
@@ -125,12 +130,15 @@ class MqttService {
             final jsonData = json.decode(payload) as Map<String, dynamic>;
             final data = PulseOxData.fromJson(jsonData);
             onDataReceived?.call(data);
+            // Save to Supabase
+            _savePulseOxDataToSupabase(data);
           } catch (e) {
             print('Error parsing pulseox/data: $e');
           }
           break;
         case topicStatus:
           onStatusReceived?.call(payload);
+          _saveStatusToSupabase(payload);
           break;
         case topicHeartRate:
           onHeartRateReceived?.call(payload);
@@ -142,6 +150,119 @@ class MqttService {
     });
   }
   
+  // Save PulseOx data to Supabase
+  Future<void> _savePulseOxDataToSupabase(PulseOxData data) async {
+    try {
+      await supabase.from('pulseox_data').insert({
+        'heart_rate': data.heartRate,
+        'spo2': data.spO2,
+        'timestamp': data.timestamp?.toIso8601String() ?? DateTime.now().toIso8601String(),
+        'device_id': clientId,
+      });
+      print('PulseOx data saved to Supabase');
+    } catch (e) {
+      print('Error saving PulseOx data to Supabase: $e');
+    }
+  }
+  
+  // Save status to Supabase
+  Future<void> _saveStatusToSupabase(String status) async {
+    try {
+      await supabase.from('pulseox_status').insert({
+        'status': status,
+        'timestamp': DateTime.now().toIso8601String(),
+        'device_id': clientId,
+      });
+      print('Status saved to Supabase');
+    } catch (e) {
+      print('Error saving status to Supabase: $e');
+    }
+  }
+  
+  // Fetch all PulseOx data from Supabase
+  Future<List<Map<String, dynamic>>> fetchPulseOxData() async {
+    try {
+      final data = await supabase
+          .from('pulseox_data')
+          .select()
+          .order('timestamp', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching PulseOx data from Supabase: $e');
+      return [];
+    }
+  }
+  
+  // Fetch PulseOx data by date range
+  Future<List<Map<String, dynamic>>> fetchPulseOxDataByDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final data = await supabase
+          .from('pulseox_data')
+          .select()
+          .gte('timestamp', startDate.toIso8601String())
+          .lte('timestamp', endDate.toIso8601String())
+          .order('timestamp', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching PulseOx data by date range: $e');
+      return [];
+    }
+  }
+  
+  // Fetch latest PulseOx data
+  Future<Map<String, dynamic>?> fetchLatestPulseOxData() async {
+    try {
+      final data = await supabase
+          .from('pulseox_data')
+          .select()
+          .order('timestamp', ascending: false)
+          .limit(1)
+          .single();
+      return data;
+    } catch (e) {
+      print('Error fetching latest PulseOx data: $e');
+      return null;
+    }
+  }
+  
+  // Fetch all status logs
+  Future<List<Map<String, dynamic>>> fetchStatusLogs() async {
+    try {
+      final data = await supabase
+          .from('pulseox_status')
+          .select()
+          .order('timestamp', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching status logs from Supabase: $e');
+      return [];
+    }
+  }
+  
+  // Delete old data (older than specified days)
+  Future<void> deleteOldData(int daysToKeep) async {
+    try {
+      final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
+      
+      await supabase
+          .from('pulseox_data')
+          .delete()
+          .lt('timestamp', cutoffDate.toIso8601String());
+      
+      await supabase
+          .from('pulseox_status')
+          .delete()
+          .lt('timestamp', cutoffDate.toIso8601String());
+      
+      print('Old data deleted successfully');
+    } catch (e) {
+      print('Error deleting old data: $e');
+    }
+  }
+
   void ensureMessageHandlers() {
     if (client != null && isConnected && _messageSubscription == null) {
       _setupMessageHandlers();
@@ -188,4 +309,3 @@ class MqttService {
     }
   }
 }
-
